@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>History Press ASR/POD Viewer</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <style>
+        .selected-row {
+            background-color: #e2e3e5 !important;
+        }
+        .selected-row td.bg-success {
+            background-color: #2da745 !important;
+        }
+    </style>
+</head>
+<body class="bg-light">
+    <div class="container py-4">
+        <div class="card shadow">
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                <h4 class="mb-0">History Press ASR/POD Viewer</h4>
+                <div>
+                    <button type="button" class="btn btn-outline-light me-2" id="copySelected" disabled>Copy Selected</button>
+                    <button type="button" class="btn btn-outline-light" onclick="clearData()">Clear Data</button>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label for="csvFile" class="form-label">Upload CSV File</label>
+                    <input type="file" class="form-control" id="csvFile" accept=".csv">
+                </div>
+                <div class="alert alert-info mt-3" id="status" style="display: none;"></div>
+                <div class="table-responsive mt-3">
+                    <table class="table table-bordered table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th><input type="checkbox" id="selectAll" class="form-check-input"></th>
+                                <th>PO Number</th>
+                                <th>Date Ordered</th>
+                                <th>ISBN</th>
+                                <th>Quantity</th>
+                            </tr>
+                        </thead>
+                        <tbody id="previewBody">
+                            <tr>
+                                <td colspan="5" class="text-center">No data loaded</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentData = [];
+        let selectedRows = new Set();
+        const copyBtn = document.getElementById('copySelected');
+        const selectAllCheckbox = document.getElementById('selectAll');
+
+        document.getElementById('csvFile').addEventListener('change', handleFileSelect);
+        copyBtn.addEventListener('click', copySelectedRows);
+        selectAllCheckbox.addEventListener('change', handleSelectAll);
+
+        function clearData() {
+            currentData = [];
+            selectedRows.clear();
+            document.getElementById('csvFile').value = '';
+            selectAllCheckbox.checked = false;
+            updateTable([]);
+            updateCopyButton();
+            showStatus('Data cleared', 'info');
+        }
+
+        function handleSelectAll(event) {
+            const checkboxes = document.querySelectorAll('tbody input[type="checkbox"]');
+            checkboxes.forEach((checkbox, index) => {
+                checkbox.checked = event.target.checked;
+                if (event.target.checked) {
+                    selectedRows.add(index);
+                    checkbox.closest('tr').classList.add('selected-row');
+                } else {
+                    selectedRows.delete(index);
+                    checkbox.closest('tr').classList.remove('selected-row');
+                }
+            });
+            updateCopyButton();
+        }
+
+        function handleFileSelect(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            showStatus('Processing file...', 'info');
+
+            Papa.parse(file, {
+                header: false,
+                dynamicTyping: false,
+                skipEmptyLines: true,
+                complete: function(results) {
+                    const hdrRow = results.data.find(row => row[0] === 'HDR');
+                    const orderDate = hdrRow ? formatDate(hdrRow[2]) : '';
+                    
+                    const dtlRows = results.data
+                        .filter(row => row[0] === 'DTL')
+                        .map(row => ({
+                            poNumber: row[1],
+                            dateOrdered: orderDate,
+                            isbn: row[3],
+                            quantity: row[4]
+                        }));
+
+                    currentData = dtlRows;
+                    updateTable(dtlRows);
+                    showStatus('Data loaded successfully!', 'success');
+                },
+                error: function(error) {
+                    console.error('Error:', error);
+                    showStatus('Error processing file', 'danger');
+                }
+            });
+        }
+
+        function updateTable(data) {
+            const tbody = document.getElementById('previewBody');
+            tbody.innerHTML = '';
+            selectedRows.clear();
+            updateCopyButton();
+            selectAllCheckbox.checked = false;
+
+            if (data.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" class="text-center">No data loaded</td></tr>';
+                return;
+            }
+
+            data.forEach((row, index) => {
+                const tr = document.createElement('tr');
+                tr.dataset.index = index;
+                tr.innerHTML = `
+                    <td><input type="checkbox" class="form-check-input" data-index="${index}"></td>
+                    <td>${row.poNumber}</td>
+                    <td>${row.dateOrdered}</td>
+                    <td>${row.isbn}</td>
+                    <td class="${Number(row.quantity) >= 50 ? 'bg-success text-white' : ''}">${row.quantity}</td>
+                `;
+                
+                const checkbox = tr.querySelector('input[type="checkbox"]');
+                checkbox.addEventListener('change', () => toggleRowSelection(tr, index, checkbox));
+                
+                tbody.appendChild(tr);
+            });
+        }
+
+        function toggleRowSelection(tr, index, checkbox) {
+            if (checkbox.checked) {
+                selectedRows.add(index);
+                tr.classList.add('selected-row');
+            } else {
+                selectedRows.delete(index);
+                tr.classList.remove('selected-row');
+                selectAllCheckbox.checked = false;
+            }
+            updateCopyButton();
+        }
+
+        function updateCopyButton() {
+            copyBtn.disabled = selectedRows.size === 0;
+        }
+
+        function copySelectedRows() {
+            const selectedData = Array.from(selectedRows)
+                .sort((a, b) => a - b)
+                .map(index => currentData[index]);
+
+            const tableHtml = `
+                <table border="1" style="border-collapse: collapse; width: 100%;">
+                    <thead>
+                        <tr>
+                            <th style="padding: 8px; background-color: #f8f9fa;">PO Number</th>
+                            <th style="padding: 8px; background-color: #f8f9fa;">Date Ordered</th>
+                            <th style="padding: 8px; background-color: #f8f9fa;">ISBN</th>
+                            <th style="padding: 8px; background-color: #f8f9fa;">Quantity</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${selectedData.map(row => `
+                            <tr>
+                                <td style="padding: 8px;">${row.poNumber}</td>
+                                <td style="padding: 8px;">${row.dateOrdered}</td>
+                                <td style="padding: 8px;">${row.isbn}</td>
+                                <td style="padding: 8px; ${Number(row.quantity) >= 50 ? 'background-color: #198754; color: white;' : ''}">${row.quantity}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+
+            const blob = new Blob([tableHtml], { type: 'text/html' });
+            const clipboardItem = new ClipboardItem({ 'text/html': blob });
+            navigator.clipboard.write([clipboardItem])
+                .then(() => showStatus('Selected rows copied to clipboard!', 'success'))
+                .catch(err => {
+                    console.error('Failed to copy:', err);
+                    showStatus('Failed to copy rows', 'danger');
+                });
+        }
+
+        function formatDate(dateString) {
+            if (!dateString) return '';
+            dateString = String(dateString);
+            if (dateString.length !== 8) return dateString;
+            
+            const year = dateString.slice(2, 4);
+            const month = dateString.slice(4, 6);
+            const day = dateString.slice(6, 8);
+            return `${day}/${month}/${year}`;
+        }
+
+        function showStatus(message, type) {
+            const statusDiv = document.getElementById('status');
+            statusDiv.className = `alert alert-${type}`;
+            statusDiv.textContent = message;
+            statusDiv.style.display = 'block';
+
+            if (type === 'success' || type === 'info') {
+                setTimeout(() => {
+                    statusDiv.style.display = 'none';
+                }, 3000);
+            }
+        }
+    </script>
+</body>
+</html>
