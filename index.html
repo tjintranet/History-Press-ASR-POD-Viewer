@@ -91,16 +91,24 @@
 
         function handleSelectAll(event) {
             const checkboxes = document.querySelectorAll('tbody input[type="checkbox"]');
-            checkboxes.forEach((checkbox, index) => {
-                checkbox.checked = event.target.checked;
-                if (event.target.checked) {
-                    selectedRows.add(index);
-                    checkbox.closest('tr').classList.add('selected-row');
-                } else {
-                    selectedRows.delete(index);
-                    checkbox.closest('tr').classList.remove('selected-row');
+            const visibleRows = document.querySelectorAll('tbody tr[data-index]');
+            
+            visibleRows.forEach(row => {
+                const index = parseInt(row.dataset.index);
+                const checkbox = row.querySelector('input[type="checkbox"]');
+                
+                if (checkbox) {
+                    checkbox.checked = event.target.checked;
+                    if (event.target.checked) {
+                        selectedRows.add(index);
+                        row.classList.add('selected-row');
+                    } else {
+                        selectedRows.delete(index);
+                        row.classList.remove('selected-row');
+                    }
                 }
             });
+            
             updateCopyButton();
         }
 
@@ -154,21 +162,24 @@
                 return;
             }
 
+            // Create array with original indices
+            const dataWithIndices = data.map((row, index) => ({...row, originalIndex: index}));
+
             // Filter data if the toggle is active
             const filteredData = filterHighQuantityCheckbox.checked 
-                ? data.filter(row => Number(row.quantity) >= 50)
-                : data;
+                ? dataWithIndices.filter(row => Number(row.quantity) >= 50)
+                : dataWithIndices;
 
             if (filteredData.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="5" class="text-center">No matching records found</td></tr>';
                 return;
             }
 
-            filteredData.forEach((row, index) => {
+            filteredData.forEach(row => {
                 const tr = document.createElement('tr');
-                tr.dataset.index = index;
+                tr.dataset.index = row.originalIndex;
                 tr.innerHTML = `
-                    <td><input type="checkbox" class="form-check-input" data-index="${index}"></td>
+                    <td><input type="checkbox" class="form-check-input" data-index="${row.originalIndex}"></td>
                     <td>${row.poNumber}</td>
                     <td>${row.dateOrdered}</td>
                     <td>${row.isbn}</td>
@@ -176,7 +187,7 @@
                 `;
                 
                 const checkbox = tr.querySelector('input[type="checkbox"]');
-                checkbox.addEventListener('change', () => toggleRowSelection(tr, index, checkbox));
+                checkbox.addEventListener('change', () => toggleRowSelection(tr, row.originalIndex, checkbox));
                 
                 tbody.appendChild(tr);
             });
