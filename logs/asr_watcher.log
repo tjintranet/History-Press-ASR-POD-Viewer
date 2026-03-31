@@ -1,0 +1,12 @@
+2026-03-31 09:18:03  INFO      ASR Folder Watcher starting
+2026-03-31 09:18:03  INFO        Input    : /Users/coling/Documents/GitHub/History-Press-ASR-POD-Viewer/input
+2026-03-31 09:18:03  INFO        Output   : /Users/coling/Documents/GitHub/History-Press-ASR-POD-Viewer/output
+2026-03-31 09:18:03  INFO        Log file : /Users/coling/Documents/GitHub/History-Press-ASR-POD-Viewer/logs/asr_watcher.log
+2026-03-31 09:18:03  INFO        Threshold: qty >= 50 will be removed
+2026-03-31 09:18:03  INFO      Watching for new files — press Ctrl+C to stop
+2026-03-31 09:18:21  INFO      Processing: 20260330_ASR_HISTORYP.CSV
+2026-03-31 09:18:21  INFO        Removed 3 order(s) with qty ≥ 50, kept 9 — written to /Users/coling/Documents/GitHub/History-Press-ASR-POD-Viewer/output/20260330_ASR_HISTORYP.CSV
+2026-03-31 09:18:21  INFO        Deleted source file: /Users/coling/Documents/GitHub/History-Press-ASR-POD-Viewer/input/20260330_ASR_HISTORYP.CSV
+2026-03-31 09:18:22  INFO      Processing: 20260330_MOD_HISTORYP.CSV
+2026-03-31 09:18:22  INFO        No high-qty orders found — 5 order(s) passed through unchanged → /Users/coling/Documents/GitHub/History-Press-ASR-POD-Viewer/output/20260330_MOD_HISTORYP.CSV
+2026-03-31 09:18:22  INFO        Deleted source file: /Users/coling/Documents/GitHub/History-Press-ASR-POD-Viewer/input/20260330_MOD_HISTORYP.CSV
